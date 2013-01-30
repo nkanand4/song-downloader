@@ -1,0 +1,13 @@
+#!/bin/sh
+#cmd=$(curl $1 | grep songid | sed -e 's/.*\(http.*\)">\(.*\)<\/a.*/\1 -O "\2.mp3"/')
+#cmd=$(curl $1 | grep songid | sed -e 's/.*\(http.*\)".*/\1/')
+#for url in $cmd; do
+#	wget $url
+#	sleep 30
+#done
+node ~/Developer/my-dev-arena/song-downloader/songlist.js $*
+if (test -f /tmp/songlist.sh); then
+	sh /tmp/songlist.sh
+else
+	echo "Songlist shell file not created yet."
+fi
