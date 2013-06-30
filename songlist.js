@@ -1,5 +1,7 @@
 var http = require('http'),
 	fs = require('fs'),
+	url = require('url'),
+	jsdom = require('jsdom'),
 	optpk = {
 		host: 'www.songspk.pk',// this is just default; not in use
 		path: '/bombay1992.html'// this is just default; not in use
@@ -8,38 +10,46 @@ if(process.argv.length < 3) {
 	console.log('songspk url for the movie is missing. Exiting now.');
 	process.exit(1);
 }else {
-	tmp = process.argv[2].replace(/http:\/\//, '').split(/\//);
-	optpk.host = tmp[0];
-	optpk.path = '/'+tmp[1];
-	console.log(tmp);
+	optpk = url.parse(process.argv[2]);
+	optpk["user-agent"] =  "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:21.0) Gecko/20100101 Firefox/21.0";
 }
-var req = http.request(optpk, function(res) {
- //do something
- 	var str;
+
+function getLinks(str, fn) {
+  var songs = [];
+  fn = fn || function() {};
+  jsdom.env(str, ["http://code.jquery.com/jquery.js"], function(a, win) {
+    var $ = win.jQuery;
+    $('a[href*="songid"]').each(function() {
+      songs.push({
+        name: $(this).text(),
+        url: $(this).attr('href')
+      });
+    });
+    fn(songs);
+  });
+}
+
+var req = http.get(optpk, function(res) {
+    var str = '';
+  console.log('Response is: ', res.statusCode);
 	res.on('data', function (chunk) {
 		str += chunk;
 	});
 	res.on('end', function () {
-		var lines = '',
-			i, matches = str.match(/(http.*songid=.*)">\n?(.*)<\/a/g),
-		info = [];
-		for(i = 0; i < matches.length; i++) {
-			console.log(matches[i]);
-			info.push({
-				link: matches[i].replace(/">.*\n?.*/g,''),
-				name: matches[i].replace(/.*[0-9]">([\t\n]+)?/g,'').replace(/<\/a/,'.mp3')
-			});
-		}
-		for(i = 0; i < info.length; i++) {
-			lines += 'wget '+ info[i].link + ' -O "' + info[i].name + '"\nsleep 5;\n';
-		}
-		fs.writeFile('/tmp/songlist.sh', lines, function (err) {
-		  if (err) {
-		  	throw err;
-		  	process.exit(1);
-		  };
-		  console.log('Shell file created!');
-		  process.exit(0);
+		getLinks(str, function(list) {
+		  var i, lines = '#!/bin/sh' + '\n';
+		  for(i = 0; i < list.length; i++) {
+	      lines += 'wget --user-agent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:21.0) Gecko/20100101 Firefox/21.0" '+ list[i].url + ' -O "' + list[i].name + '.mp3' + '"\nsleep 5;\n';
+	    }
+	    fs.writeFile('/tmp/songlist.sh', lines, function (err) {
+	      if (err) {
+	        throw err;
+	        process.exit(1);
+	      };
+	      console.log('Shell file created! Run the following command from the directory where you want to download the songs.');
+	      console.log('sh /tmp/songlist.sh');
+	      process.exit(0);
+	    });
 		});
 	});
 });
