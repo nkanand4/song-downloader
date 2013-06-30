@@ -31,27 +31,31 @@ function getLinks(str, fn) {
 
 var req = http.get(optpk, function(res) {
     var str = '';
-  console.log('Response is: ', res.statusCode);
-	res.on('data', function (chunk) {
-		str += chunk;
-	});
-	res.on('end', function () {
-		getLinks(str, function(list) {
-		  var i, lines = '#!/bin/sh' + '\n';
-		  for(i = 0; i < list.length; i++) {
-	      lines += 'wget --user-agent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:21.0) Gecko/20100101 Firefox/21.0" '+ list[i].url + ' -O "' + list[i].name + '.mp3' + '"\nsleep 5;\n';
-	    }
-	    fs.writeFile('/tmp/songlist.sh', lines, function (err) {
-	      if (err) {
-	        throw err;
-	        process.exit(1);
-	      };
-	      console.log('Shell file created! Run the following command from the directory where you want to download the songs.');
-	      console.log('sh /tmp/songlist.sh');
-	      process.exit(0);
-	    });
-		});
-	});
+  if(res.statusCode == 200) {
+    res.on('data', function (chunk) {
+      str += chunk;
+    });
+    res.on('end', function () {
+      console.log('Got page.. sending for parsing');
+      getLinks(str, function(list) {
+        var i, lines = '#!/bin/sh' + '\n';
+        for(i = 0; i < list.length; i++) {
+          lines += 'wget --user-agent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:21.0) Gecko/20100101 Firefox/21.0" '+ list[i].url + ' -O "' + list[i].name + '.mp3' + '"\nsleep 5;\n';
+        }
+        fs.writeFile('/tmp/songlist.sh', lines, function (err) {
+          if (err) {
+            throw err;
+            process.exit(1);
+          };
+          console.log('Shell file created! Run the following command from the directory where you want to download the songs.');
+          console.log('sh /tmp/songlist.sh');
+          process.exit(0);
+        });
+      });
+    });
+  }else {
+    console.log('Response is: ', res.statusCode);
+  }
 });
 
 req.on('error', function(arg) {
