@@ -21,7 +21,7 @@ function getLinks(str, fn) {
     var $ = win.jQuery;
     $('a[href*="songid"]').each(function() {
       songs.push({
-        name: $(this).text(),
+        name: $.trim($(this).text()),
         url: $(this).attr('href')
       });
     });
